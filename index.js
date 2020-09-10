@@ -8,6 +8,7 @@ var defaultOpts = {
 
 module.exports = function exceljsStream(opts) {
   opts = Object.assign(defaultOpts, opts)
+  const sheetName = opts.sheetName || '';
   var input = through()
   var second = through({ objectMode: opts.objectMode })
   var workbook = new Excel.Workbook()
@@ -16,6 +17,7 @@ module.exports = function exceljsStream(opts) {
   var reader = workbook.xlsx.read(input)
   .then(function (worksheet) {
     workbook.eachSheet(function (sheet, id) {
+      console.log(sheet);
       sheet.eachRow(function (row, id) {
         if (id === 1 || !headers) {
           headers = opts.mapHeaders ? row.values.map(opts.mapHeaders) : row.values
