@@ -8,7 +8,6 @@ var defaultOpts = {
 
 module.exports = function exceljsStream(opts) {
   opts = Object.assign(defaultOpts, opts)
-  const sheetName = opts.sheetName || '';
   var input = through()
   var second = through({ objectMode: opts.objectMode })
   var workbook = new Excel.Workbook()
@@ -17,24 +16,22 @@ module.exports = function exceljsStream(opts) {
   var reader = workbook.xlsx.read(input)
   .then(function (worksheet) {
     workbook.eachSheet(function (sheet, id) {
-      if (sheetName === sheet.name) {
-        sheet.eachRow(function (row, id) {
-          if (id === 1 || !headers) {
-            headers = opts.mapHeaders ? row.values.map(opts.mapHeaders) : row.values
-            return
-          }
-          var item = {}
-          row.values.forEach(function (v, k) {
-            if (!headers) return
-            item[headers[k]] = opts.mapValues ? opts.mapValues(v) : v
-          })
-          if (!opts.objectMode) {
-            second.push(JSON.stringify(item))
-            return
-          }
-          second.push(item)
+      sheet.eachRow(function (row, id) {
+        if (id === 1 || !headers) {
+          headers = opts.mapHeaders ? row.values.map(opts.mapHeaders) : row.values
+          return
+        }
+        var item = {}
+        row.values.forEach(function (v, k) {
+          if (!headers) return
+          item[headers[k]] = opts.mapValues ? opts.mapValues(v) : v
         })
-      }
+        if (!opts.objectMode) {
+          second.push(JSON.stringify(item))
+          return
+        }
+        second.push(item)
+      })
     })
     second.end()
   })
@@ -45,4 +42,11 @@ module.exports = function exceljsStream(opts) {
       second.emit('error', err)
     })
   return duplex.obj(input, second)
+}
+
+module.exports.hasMultipleSheets = async (fileName) => {
+  const workbook = new Excel.Workbook();
+  await workbook.xlsx.readFile(fileName);
+
+  return workbook.worksheets.length > 1 ? true : false;
 }
